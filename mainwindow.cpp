@@ -11,6 +11,8 @@
 #include <ctime>
 #include <QFont>
 #include <unistd.h>
+#include <QPropertyAnimation>
+#include <QRect>
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -35,6 +37,7 @@ MainWindow::MainWindow(QWidget *parent) :
     {
         label[i%4][i/4]=new QLabel(centralWidget());
         label[i%4][i/4]->setGeometry(place[i%4][i/4].x,place[i%4][i/4].y,100,100);
+        label[i%4][i/4]->setScaledContents(1);
         label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/0.jpg"));
     }
     //button q
@@ -69,6 +72,10 @@ MainWindow::MainWindow(QWidget *parent) :
     laststep->setFont(QFont("Courier",10,QFont::Bold));
     laststep->setText("Last step");
     connect(laststep,SIGNAL(clicked()),this,SLOT(steplast()));
+    //ani
+    for(int i=0;i<16;i++){
+        ani[i%4][i/4]=new QPropertyAnimation(label[i%4][i/4],"geometry");
+    }
     //setpic
     randomnum();
     setpic();
@@ -89,6 +96,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     else if(event->key()==Qt::Key_Up){storestep();pressup(0);}
     else if(event->key()==Qt::Key_Down){storestep();pressdown(0);}
     else{return;}
+    testend();
     QString str=QString::number(grade);
     gradelabel->setText("Grade : "+str);
 }
@@ -97,16 +105,20 @@ int MainWindow::pressup(int mode)
     int i,j,cpvalue[16],chk=0;
     for(i=0;i<16;i++){cpvalue[i]=value[i%4][i/4];}
     for(i=0;i<4;i++){for(j=0;j<3;j++){
-        for(int i=0;i<4;i++){for(int j=2;j>=0;j--){if(value[i][j]==0){value[i][j]=value[i][j+1];value[i][j+1]=0;}}}
-        if(value[i][j]==value[i][j+1]){value[i][j]*=2;value[i][j+1]=0;if(!mode){grade+=value[i][j];}}
+        for(int i=0;i<4;i++){for(int j=2;j>=0;j--){
+            if(value[i][j]==0 && value[i][j+1]!=0){value[i][j]=value[i][j+1];value[i][j+1]=0;if(!mode){animate(i,j+1,1);}}
+        }}
+        if(value[i][j]==value[i][j+1] && value[i][j]!=0){
+            value[i][j]*=2;value[i][j+1]=0;
+            if(!mode){grade+=value[i][j];animate(i,j+1,1);}
+        }
+        else if(value[i][j]==0){value[i][j]=value[i][j+1];value[i][j+1]=0;}
     }}
     for(i=0;i<16;i++){if(cpvalue[i]==value[i%4][i/4]){chk++;}}
     if(chk>=16){return 1;}
-    if(mode==0)
-    {
+    if(!mode){
         randomnum();
         setpic();
-        testend();
     }
     return 0;
 }
@@ -117,14 +129,13 @@ int MainWindow::pressdown(int mode)
     for(i=0;i<4;i++){for(j=3;j>0;j--){
         for(int i=0;i<4;i++){for(int j=1;j<4;j++){if(value[i][j]==0){value[i][j]=value[i][j-1];value[i][j-1]=0;}}}
         if(value[i][j]==value[i][j-1]){value[i][j]*=2;value[i][j-1]=0;if(!mode){grade+=value[i][j];}}
+        else if(value[i][j]==0){value[i][j]=value[i][j-1];value[i][j-1]=0;}
     }}
     for(i=0;i<16;i++){if(cpvalue[i]==value[i%4][i/4]){chk++;}}
     if(chk>=16){return 1;}
-    if(mode==0)
-    {
+    if(!mode){
         randomnum();
         setpic();
-        testend();
     }
     return 0;
 }
@@ -135,14 +146,13 @@ int MainWindow::pressleft(int mode)
     for(i=0;i<3;i++){for(j=0;j<4;j++){
         for(int i=2;i>=0;i--){for(int j=0;j<4;j++){if(value[i][j]==0){value[i][j]=value[i+1][j];value[i+1][j]=0;}}}
         if(value[i][j]==value[i+1][j]){value[i][j]*=2;value[i+1][j]=0;if(!mode){grade+=value[i][j];}}
+        else if(value[i][j]==0){value[i][j]=value[i+1][j];value[i+1][j]=0;}
     }}
     for(i=0;i<16;i++){if(cpvalue[i]==value[i%4][i/4]){chk++;}}
     if(chk>=16){return 1;}
-    if(mode==0)
-    {
+    if(!mode){
         randomnum();
         setpic();
-        testend();
     }
     return 0;
 }
@@ -153,28 +163,32 @@ int MainWindow::pressright(int mode)
     for(i=3;i>0;i--){for(j=0;j<4;j++){
         for(int i=1;i<4;i++){for(int j=0;j<4;j++){if(value[i][j]==0){value[i][j]=value[i-1][j];value[i-1][j]=0;}}}
         if(value[i][j]==value[i-1][j]){value[i][j]*=2;value[i-1][j]=0;if(!mode){grade+=value[i][j];}}
+        else if(value[i][j]==0){value[i][j]=value[i-1][j];value[i-1][j]=0;}
     }}
     for(i=0;i<16;i++){if(cpvalue[i]==value[i%4][i/4]){chk++;}}
     if(chk>=16){return 1;}
-    if(mode==0)
-    {
+    if(!mode){
         randomnum();
         setpic();
-        testend();
     }
     return 0;
 }
 int MainWindow::randomnum()
 {
     srand(time(NULL));
-    int add=0;
+    int add=0,a,b;
     for(int i=0;i<16;i++){if(value[i%4][i/4]!=0){add++;}}if(add==16){return 1;}
 
     while(1){
-        int a=rand()%16;
-        int b=rand()%100;
+        a=rand()%16;
+        b=rand()%100;
         if(value[a%4][a/4]==0){value[a%4][a/4]=b>25?2:4;break;}
     }
+    anim=new QPropertyAnimation(label[a%4][a/4],"geometry");
+    anim->setDuration(100);
+    anim->setStartValue(QRect(place[a%4][a/4].x+25,place[a%4][a/4].y+25,50,50));
+    anim->setEndValue(QRect(place[a%4][a/4].x,place[a%4][a/4].y,100,100));
+    anim->start();
     return 0;
 }
 int MainWindow::setpic()
@@ -182,22 +196,8 @@ int MainWindow::setpic()
     for(int i=0;i<16;i++)
     {
         QString str=QString::number(value[i%4][i/4]);
+        label[i%4][i/4]->setGeometry(place[i%4][i/4].x,place[i%4][i/4].y,100,100);
         label[i%4][i/4]->setPixmap(":numbers/num/"+str+".jpg");
-        /*switch(value[i%4][i/4])
-        {
-            case 0:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/0.jpg"));break;
-            case 2:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/2.jpg"));break;
-            case 4:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/4.jpg"));break;
-            case 8:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/8.jpg"));break;
-            case 16:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/16.jpg"));break;
-            case 32:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/32.jpg"));break;
-            case 64:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/64.jpg"));break;
-            case 128:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/128.jpg"));break;
-            case 256:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/256.jpg"));break;
-            case 512:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/512.jpg"));break;
-            case 1024:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/1024.jpg"));break;
-            case 2048:label[i%4][i/4]->setPixmap(QPixmap(":numbers/num/2048.jpg"));break;
-        }*/
     }
     return 0;
 }
@@ -269,5 +269,22 @@ int MainWindow::storestep()
     for(int i=0;i<16;i++){v.vvalue[i]=value[i%4][i/4];}
     v.vgrade=grade;
     last.push(v);
+    return 0;
+}
+int MainWindow::animate(int i,int j,int direct)
+{
+    QString str=QString::number(value[i%4][i/4]);
+    label[i][j]->setPixmap(":numbers/num/"+str+".jpg");
+    ani[i][j]->setDuration(200);
+    ani[i][j]->setStartValue(QRect(place[i][j].x,place[i][j].y,100,100));
+    ani[i][j]->setEndValue(QRect(place[i][j].x,place[i][j].y,100,100));
+    switch (direct){
+        case 1:ani[i][j]->setKeyValueAt(0.999,QRect(place[i][j-1].x+25,place[i][j-1].y+25,50,50));break;
+        case 2:ani[i][j]->setKeyValueAt(0.999,QRect(place[i][j+1].x+25,place[i][j+1].y+25,50,50));break;
+        case 3:ani[i][j]->setKeyValueAt(0.999,QRect(place[i-1][j].x+25,place[i-1][j].y+25,50,50));break;
+        case 4:ani[i][j]->setKeyValueAt(0.999,QRect(place[i+1][j].x+25,place[i+1][j].y+25,50,50));break;
+    }
+    ani[i][j]->start();
+    //label[i][j]->setGeometry(place[i][j].x,place[i][j].y,100,100);
     return 0;
 }

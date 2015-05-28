@@ -5,7 +5,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <Qstack>
-//typedef struct ns{int vvalue[16];}v;
+#include <QPropertyAnimation>
 
 namespace Ui {
 class MainWindow;
@@ -31,6 +31,7 @@ private:
     QLabel *gradelabel;
     QPushButton *laststep;
     QPushButton *quit,*restart;
+    QPropertyAnimation *ani[4][4],*anim;
     //variable
     struct pplace{int x,y;}place[4][4];
     int value[4][4];
@@ -49,6 +50,7 @@ private:
     int testend();
     int win();
     int storestep();
+    int animate(int,int,int);
 };
 
 #endif // MAINWINDOW_H
